@@ -1,66 +1,79 @@
-## Foundry
+# Uint256 Overflow PoC
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+This repository contains a **proof-of-concept (PoC)** for the `Uint256MulSyscall` vulnerability in a Rust-based emulator of EVM-like contracts.
 
-Foundry consists of:
+The PoC demonstrates **panic due to unaligned pointers** and **modulus pointer overflow**, which can lead to a denial-of-service in the system.
 
-- **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
-- **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
-- **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
-- **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+---
 
-## Documentation
+## Project Structure
 
-https://book.getfoundry.sh/
+- `src/`
+  - `main.rs`: Entry point to run the PoC.
+  - `syscall.rs`: Contains the `Uint256MulSyscall` implementation.
+- `Cargo.toml`: Rust project configuration.
+- `lib/forge-std`: Optional Foundry standard library submodule (if you want to integrate Ethereum testing).
 
-## Usage
+> Note: Some code was trimmed for clarity; only the essential syscall logic is included for demonstration purposes.
 
-### Build
+---
 
-```shell
-$ forge build
+## Requirements
+
+- Rust >= 1.70
+- Cargo
+- (Optional) Foundry toolkit if you want to integrate Ethereum testing: [https://book.getfoundry.sh](https://book.getfoundry.sh)
+
+---
+
+## Run the PoC
+
+1. Clone the repository:
+
+```bash
+git clone git@github.com:attacker-code/uint256_overflow_poc.git
+cd uint256_overflow_poc
+````
+
+2. Build the project:
+
+```bash
+cargo build
 ```
 
-### Test
+3. Run the PoC:
 
-```shell
-$ forge test
+```bash
+cargo run
 ```
 
-### Format
+You should see output similar to:
 
-```shell
-$ forge fmt
+```
+warning: unused variable: `clk`
+  --> src/syscall.rs:20:13
+...
+thread 'main' panicked at src/syscall.rs:28:13:
+y_ptr is not aligned
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+Panic detected due to modulus_ptr overflow!
 ```
 
-### Gas Snapshots
+This confirms the **vulnerability in the syscall implementation**.
 
-```shell
-$ forge snapshot
-```
+---
 
-### Anvil
+## Function Flow Affected
 
-```shell
-$ anvil
-```
+* `Uint256MulSyscall::emulate()`
 
-### Deploy
+  * Reads x and y from memory using potentially unsafe pointers
+  * Computes modulus pointer without overflow checks
+  * Performs multiplication modulo the modulus
+  * Panics if pointers are misaligned or if overflow occurs
 
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
+---
 
-### Cast
+## Disclaimer
 
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+This PoC is for **educational and research purposes only**. Do **not deploy** to production.
